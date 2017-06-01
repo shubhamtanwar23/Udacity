@@ -10,7 +10,7 @@ Dependencies
 
 
 tournament.sql
-	This file contains the create query for two tables i.e player and matches
+	This file contains the create query for two tables i.e player and matches.
 
 
 
