@@ -17,8 +17,6 @@ def deleteMatches():
     cursor = conn.cursor()
     QUERY = "DELETE FROM matches;"
     cursor.execute(QUERY)
-    QUERY = "UPDATE player SET wins=0, matches=0;"
-    cursor.execute(QUERY)
     conn.commit()
     conn.close()
 
@@ -31,7 +29,6 @@ def deletePlayers():
     cursor.execute(QUERY)
     conn.commit()
     conn.close()
-    deleteMatches()
 
 def countPlayers():
     """Returns the number of players currently registered."""
@@ -39,7 +36,7 @@ def countPlayers():
     cursor = conn.cursor()
     QUERY = "SELECT count(*) FROM player;"
     cursor.execute(QUERY)
-    count = cursor.fetchall()[0][0]
+    count = cursor.fetchone()[0]
     conn.close()
     return count
 
@@ -74,10 +71,21 @@ def playerStandings():
     """
     conn = connect()
     cursor = conn.cursor()
-    QUERY = "SELECT * FROM player ORDER BY wins desc;"
+    QUERY = "CREATE VIEW view_wins as "\
+            "SELECT player.id, count(matches.id) as wins "\
+            "FROM player left outer join matches ON player.id=matches.winner "\
+            "GROUP BY player.id;"
+    cursor.execute(QUERY)
+    QUERY = "CREATE VIEW view_played as "\
+            "SELECT player.id, count(matches.id) as played "\
+            "FROM player left outer join matches ON player.id=matches.winner "\
+            "or player.id=matches.loser GROUP BY player.id;"
+    cursor.execute(QUERY)
+    QUERY = "SELECT player.id, player.name, view_wins.wins, view_played.played "\
+            "FROM player INNER JOIN view_wins ON player.id=view_wins.id "\
+            "INNER JOIN view_played ON player.id=view_played.id ORDER BY view_wins.wins;"
     cursor.execute(QUERY)
     result = cursor.fetchall()
-    conn.commit()
     conn.close()
     return result
 
@@ -90,14 +98,8 @@ def reportMatch(winner, loser):
     """
     conn = connect()
     cursor = conn.cursor()
-    QUERY = "UPDATE player SET wins = wins + 1, matches = matches + 1 where id=%s;"
-    cursor.execute(QUERY, (winner,))
-    QUERY = "UPDATE player SET matches = matches + 1 where id=%s;"
-    cursor.execute(QUERY, (loser,))
-    conn.commit()
-    QUERY = "UPDATE matches SET winner =(SELECT name FROM player WHERE id=%s) "\
-            "where (id1=%s and id2=%s) OR (id2=%s and id1=%s);"
-    cursor.execute(QUERY, (winner,winner,loser,winner,loser))
+    QUERY = "INSERT INTO matches(winner, loser) VALUES(%s, %s);"
+    cursor.execute(QUERY, (winner,loser,))
     conn.commit()
     conn.close()
 
@@ -116,20 +118,12 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    conn = connect()
-    cursor = conn.cursor()
-    QUERY = "SELECT id, name FROM player order by wins;"
-    cursor.execute(QUERY)
-    id_name = cursor.fetchall()
-    total_player = len(id_name)
+    standings = playerStandings()
+    total_player = len(standings)
     rows = []
     i = 0
     while i < total_player: 
-        QUERY_MATCH = "INSERT INTO matches(id1,name1,id2,name2) VALUES(%s,%s,%s,%s);"
-        pair = [(id_name[i][0],id_name[i][1],id_name[i+1][0],id_name[i+1][1]),]
-        rows += pair
-        cursor.execute(QUERY_MATCH,(id_name[i][0],id_name[i][1],id_name[i+1][0],id_name[i+1][1],))
+        pair = (standings[i][0],standings[i][1],standings[i+1][0],standings[i+1][1])
+        rows.append(pair)
         i += 2
-    conn.commit()
-    conn.close()
     return rows
