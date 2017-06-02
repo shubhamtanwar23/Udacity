@@ -21,6 +21,7 @@ from sqlalchemy import create_engine
   # End of file
   engine = create_engine('sqlite:///restaurantmenu.db')
   Base.metadata.create_all(engine)
+  ```
   
   2. Class :- Representation of Table as a class. Must inherit from Base class of SQLAlchemy
   ```sh
