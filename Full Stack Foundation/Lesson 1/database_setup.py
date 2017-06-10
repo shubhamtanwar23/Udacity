@@ -49,7 +49,6 @@ class MenuItem(Base):
 	restaurant = relationship(Restaurant)
 
 
-		
 
 # End of file
 engine = create_engine('sqlite:///restaurantmenu.db')
