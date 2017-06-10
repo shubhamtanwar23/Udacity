@@ -71,4 +71,4 @@ def isLeapYear(thisYear):
     else:
         return True
 
-query_four()
+query_one()
